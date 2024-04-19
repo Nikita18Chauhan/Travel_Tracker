@@ -9,6 +9,11 @@ import cors from "cors";
 import env from "dotenv";
 import { sql } from "@vercel/postgres";
 
+const { Pool } = pg;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // const app = express();
 // const port = 3000;
 
@@ -23,11 +28,6 @@ import { sql } from "@vercel/postgres";
 
 // app.use(bodyParser.urlencoded({ extended: true }));
 // app.use(express.static("public"));
-
-const { Pool } = pg;
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3000;

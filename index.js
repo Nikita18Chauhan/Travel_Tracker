@@ -24,7 +24,7 @@ import { sql } from "@vercel/postgres";
 // app.use(bodyParser.urlencoded({ extended: true }));
 // app.use(express.static("public"));
 
-const { Pool } = pkg;
+const { Pool } = pg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

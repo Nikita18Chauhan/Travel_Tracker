@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
+import pkg from "pg";
 import ejs from "ejs";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -9,7 +10,7 @@ import cors from "cors";
 import env from "dotenv";
 import { sql } from "@vercel/postgres";
 
-const { Pool } = pg;
+const { Pool } = pkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

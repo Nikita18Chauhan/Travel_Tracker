@@ -1,109 +1,87 @@
 import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
-import pkg from "pg";
 import ejs from "ejs";
 import { fileURLToPath } from "url";
 import path from "path";
-import { dirname, join } from "path";
+import { dirname } from "path";
 import cors from "cors";
 import env from "dotenv";
-import { sql } from "@vercel/postgres";
 
-const { Pool } = pkg;
+const { Pool } = pg;
 
+// Retrieve filename and directory path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// const app = express();
-// const port = 3000;
-
-// const pool = new pg.Client({
-//   user: "postgres",
-//   host: "localhost",
-//   database: "world",
-//   password: "Nikita#",
-//   port: 5432,
-// });
-// pool.connect();
-
-// app.use(bodyParser.urlencoded({ extended: true }));
-// app.use(express.static("public"));
-
+// Initialize express app
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Load environment variables from .env file
 env.config();
 
+// Create a PostgreSQL connection pool
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL + "?sslmode=require",
 });
 
+// Connect to the PostgreSQL database
 pool.connect()
   .then(() => console.log('Connected to the database'))
   .catch(err => console.error('Error connecting to the database', err));
 
+// Middleware setup
 app.use(cors());
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
-
 app.use(bodyParser.urlencoded({ extended: true }));
-// app.use(express.static("public"));
 app.use(express.static(__dirname + "/public/"));
 
-
-
-async function checkVisisted() {
+// Function to retrieve visited countries from the database
+async function checkVisitedCountries() {
   const result = await pool.query("SELECT country_code FROM visited_countries_tt");
-  let countries = [];
-  result.rows.forEach((country) => {
-    countries.push(country.country_code);
-  });
-  return countries;
+  return result.rows.map(row => row.country_code);
 }
-// GET home page
+
+// GET route for the home page
 app.get("/", async (req, res) => {
-  const countries = await checkVisisted();
-  res.render("index.ejs", { countries: countries, total: countries.length });
+  const visitedCountries = await checkVisitedCountries();
+  res.render("index.ejs", { countries: visitedCountries, total: visitedCountries.length });
 });
 
-//INSERT new country
+// POST route to add a new visited country
 app.post("/add", async (req, res) => {
   const input = req.body["country"];
 
   try {
+    // Check if the provided country name exists in the database
     const result = await pool.query(
       "SELECT country_code FROM countries WHERE LOWER(country_name) = $1;",
       [input.toLowerCase()]
     );
 
-    const data = result.rows[0];
-    const countryCode = data.country_code;
-    try {
-      await pool.query(
-        "INSERT INTO visited_countries_tt (country_code) VALUES ($1)",
-        [countryCode]
-      );
-      res.redirect("/");
-    } catch (err) {
-      console.log(err);
-      const countries = await checkVisisted();
-      res.render("index.ejs", {
-        countries: countries,
-        total: countries.length,
-        error: "Country has already been added, try again.",
-      });
-    }
+    // If the country exists, retrieve its country code
+    const countryCode = result.rows[0].country_code;
+
+    // Insert the visited country into the database
+    await pool.query("INSERT INTO visited_countries_tt (country_code) VALUES ($1)", [countryCode]);
+    
+    // Redirect to the home page
+    res.redirect("/");
   } catch (err) {
-    console.log(err);
-    const countries = await checkVisisted();
+    // Handle errors (e.g., country not found or already added)
+    console.error(err);
+    const visitedCountries = await checkVisitedCountries();
     res.render("index.ejs", {
-      countries: countries,
-      total: countries.length,
-      error: "Country name does not exist, try again.",
+      countries: visitedCountries,
+      total: visitedCountries.length,
+      error: "An error occurred. Please try again.",
     });
   }
 });
 
+// Start the server
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
